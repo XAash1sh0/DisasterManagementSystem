@@ -1,0 +1,100 @@
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background-color: #f4f4f4;
+}
+
+.main-container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+.map-section {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 10px;
+}
+
+#map {
+  height: 75vh;
+  width: 100%;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+.caption {
+  text-align: center;
+  margin-top: 10px;
+  font-size: 14px;
+  color: #555;
+  font-style: italic;
+}
+
+.incident-panel {
+  background-color: #fff;
+  padding: 10px;
+  border-top: 2px solid #ccc;
+}
+
+.incident-panel h3 {
+  background: #d32f2f;
+  color: white;
+  padding: 10px;
+  text-align: center;
+  font-size: 18px;
+  margin: 0;
+  border-radius: 4px 4px 0 0;
+}
+
+.incident-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+
+.incident-box {
+  background: #fff;
+  padding: 10px;
+  border: 1px solid #ccc;
+  text-align: center;
+  font-size: 16px;
+  color: #d32f2f;
+  font-weight: bold;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.incident-box i {
+  font-size: 20px;
+}
+
+.layer-toggle-btn {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  background: white;
+  border: none;
+  cursor: pointer;
+  padding: 6px 8px;
+  border-radius: 4px;
+  box-shadow: 0 0 5px rgba(0, 0, 0, 0.3);
+  z-index: 1001;
+}
+
+.layer-toggle-panel {
+  position: absolute;
+  top: 60px;
+  right: 20px;
+  background: white;
+  padding: 10px;
+  border-radius: 5px;
+  box-shadow: 0 0 6px rgba(0, 0, 0, 0.3);
+  z-index: 1000;
+  max-width: 180px;
+  display: none;
+}

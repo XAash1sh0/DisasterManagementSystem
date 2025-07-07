@@ -1,0 +1,76 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>About Us - Disaster Visualization</title>
+    <!-- Link the CSS -->
+    <link rel="stylesheet" href="{% static 'about/about.css' %}">
+
+
+    <!-- Link the JS (defer so it loads after HTML) -->
+    <script src="{% static 'about/about.js' %}" defer></script>
+</head>
+
+<body>
+
+    <section class="about-us-container">
+        <h1>About Us</h1>
+        <p>
+            We are a team dedicated to enhancing disaster awareness and response through powerful, user-friendly
+            visualization tools. Our platform provides up-to-date, interactive maps and filters to help users explore
+            disaster events by type, location, and time.
+        </p>
+        <p>
+            By aggregating reliable data from trusted sources, we aim to empower communities, emergency responders,
+            researchers, and policymakers with actionable insights. We believe that clear, accessible information is key
+            to reducing disaster impacts and saving lives.
+        </p>
+        <p>
+            This project is driven by experts in GIS, data analysis, and emergency management, committed to continuous
+            improvement and innovation.
+        </p>
+        <p>
+            We welcome your feedback and collaboration to make disaster data more useful and impactful.
+        </p>
+
+        <!-- Developers Section -->
+        <div class="developers-container">
+
+            <div class="developer-card">
+                <img src="{% static 'about/dk.jpg' %}" alt="Dikshya Khadka" class="developer-pic" />
+                <div class="developer-text">
+                    <p><strong>Dikshya Khadka</strong></p>
+                    <p>Undergraduate Student</p>
+                    <p><a href="http://www.dikshyakhadka.com.np/" target="_blank" rel="noopener noreferrer">
+                            Visit Portfolio</a></p>
+                </div>
+            </div>
+
+            <div class="developer-card">
+                <img src="{% static 'about/ak.png' %}" alt="Aashish Kumar Karki" class="developer-pic" />
+                <div class="developer-text">
+                    <p><strong>Aashish Kumar Karki</strong></p>
+                    <p>Undergraduate Student</p>
+                    <p><a href="https://portfolioaashish.onrender.com/" target="_blank" rel="noopener noreferrer">
+                            Visit Portfolio</a></p>
+                </div>
+            </div>
+
+            <div class="developer-card">
+                <img src="{% static 'about/na.jpg' %}" alt="Nayan Acharya" class="developer-pic" />
+                <div class="developer-text">
+                    <p><strong>Nayan Acharya</strong></p>
+                    <p>Undergraduate Student</p>
+                    <p><a href="http://nayan2047.com.np/" target="_blank" rel="noopener noreferrer">
+                            Visit Portfolio</a></p>
+                </div>
+            </div>
+
+        </div>
+    </section>
+</body>
+
+</html>

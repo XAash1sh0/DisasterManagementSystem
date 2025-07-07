@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Nepal Disaster Dashboard</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link rel="stylesheet" href="dash.css">
+</head>
+
+<body>
+  <div class="main-container">
+    <div class="map-section">
+      <h3>Disaster Alert</h3>
+      <div id="map"></div>
+      <p class="caption">Map displaying real-time disaster alerts.</p>
+    </div>
+    <div class="incident-panel">
+      <h3>Reported No. of Incidents (Last 7 Days)</h3>
+      <div class="incident-grid">
+        <div class="incident-box"><i class="fas fa-water"></i> Flood (<span id="flood-count">0</span>)</div>
+        <div class="incident-box"><i class="fas fa-mountain"></i> Landslide (<span id="landslide-count">0</span>)</div>
+        <div class="incident-box"><i class="fas fa-fire-flame-curved"></i> Fire (<span id="fire-count">0</span>)</div>
+        <div class="incident-box"><i class="fas fa-cloud-showers-heavy"></i> Heavy Rainfall (<span
+            id="rain-count">0</span>)</div>
+        <div class="incident-box"><i class="fas fa-house-crack"></i> Earthquake (<span id="earthquake-count">0</span>)
+        </div>
+        <div class="incident-box"><i class="fas fa-paw"></i> Animal Incident (<span id="animal-count">0</span>)</div>
+        <div class="incident-box"><i class="fas fa-smog"></i> AQI (<span id="AQI"></span>)</div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      // Initialize the map centered on Nepal
+      const map = L.map('map').setView([28.3949, 84.1240], 7);
+
+      // Add a tile layer
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors',
+        maxZoom: 19,
+      }).addTo(map);
+
+      // Incident counts
+      const counts = {
+        flood: 0,
+        landslide: 0,
+        fire: 0,
+        rain: 0,
+        earthquake: 0,
+        animal_incident: 0,
+        AQI: 0
+      };
+
+      // LayerGroups for each incident type
+      const floodLayer = L.layerGroup().addTo(map);
+      const landslideLayer = L.layerGroup().addTo(map);
+      const fireLayer = L.layerGroup().addTo(map);
+      const rainLayer = L.layerGroup().addTo(map);
+      const earthquakeLayer = L.layerGroup().addTo(map);
+      const animalLayer = L.layerGroup().addTo(map);
+      const aqiLayer = L.layerGroup().addTo(map);
+
+      // Map incident type string to layer
+      function getLayerByType(type) {
+        type = type.toLowerCase();
+        if (type.includes('flood')) return floodLayer;
+        if (type.includes('landslide')) return landslideLayer;
+        if (type.includes('fire')) return fireLayer;
+        if (type.includes('heavy rainfall')) return rainLayer;
+        if (type.includes('earthquake')) return earthquakeLayer;
+        if (type.includes('animal_incident')) return animalLayer;
+        if (type.includes('aqi')) return aqiLayer;
+        return null;
+      }
+
+      // Map incident type to icon HTML
+      function getIconHtml(type) {
+        type = type.toLowerCase();
+        if (type.includes('fire')) return '<i class="fas fa-fire" style="color:red; font-size:18px;"></i>';
+        if (type.includes('earthquake')) return '<i class="fas fa-bolt" style="color:orange; font-size:18px;"></i>';
+        if (type.includes('flood')) return '<i class="fas fa-water" style="color:blue; font-size:18px;"></i>';
+        if (type.includes('landslide')) return '<i class="fas fa-mountain" style="color:brown; font-size:18px;"></i>';
+        if (type.includes('heavy rainfall')) return '<i class="fas fa-cloud-showers-heavy" style="color:gray; font-size:18px;"></i>';
+        if (type.includes('animal_incident')) return '<i class="fas fa-paw" style="color:green; font-size:18px;"></i>';
+        if (type.includes('aqi')) return '<i class="fas fa-smog" style="color:green; font-size:18px;"></i>';
+        return '';
+      }
+
+      // Fetch incidents from BIPAD
+      fetch('https://bipad.gov.np/api/incident-summary')
+        .then(response => response.json())
+        .then(data => {
+          data.forEach(item => {
+            const typeRaw = item.incident_type;
+            if (!typeRaw) return;
+            const type = typeRaw.toLowerCase();
+
+            const lat = parseFloat(item.latitude);
+            const lon = parseFloat(item.longitude);
+            if (isNaN(lat) || isNaN(lon)) return;
+
+            // Count incident types
+            if (type.includes('flood')) counts.flood++;
+            else if (type.includes('landslide')) counts.landslide++;
+            else if (type.includes('fire')) counts.fire++;
+            else if (type.includes('heavy rainfall')) counts.rain++;
+            else if (type.includes('earthquake')) counts.earthquake++;
+            else if (type.includes('animal_incident')) counts.animal_incident++;
+
+            // Create marker with icon
+            const iconHtml = getIconHtml(type);
+            if (!iconHtml) return;
+
+            const incidentIcon = L.divIcon({
+              className: '',
+              html: iconHtml,
+              iconSize: [18, 18],
+              iconAnchor: [9, 9]
+            });
+
+            const layer = getLayerByType(type);
+            if (!layer) return;
+
+            const marker = L.marker([lat, lon], { icon: incidentIcon })
+              .bindPopup(`<strong>${typeRaw}</strong><br>Lat: ${lat.toFixed(4)}, Lon: ${lon.toFixed(4)}`);
+
+            layer.addLayer(marker);
+          });
+
+          // Update counts in HTML
+          document.getElementById('flood-count').textContent = counts.flood;
+          document.getElementById('landslide-count').textContent = counts.landslide;
+          document.getElementById('fire-count').textContent = counts.fire;
+          document.getElementById('rain-count').textContent = counts.rain;
+          document.getElementById('earthquake-count').textContent = counts.earthquake;
+          document.getElementById('animal-count').textContent = counts.animal_incident;
+        })
+        .catch(err => {
+          console.error("Error fetching BIPAD data:", err);
+          ['flood', 'landslide', 'fire', 'rain', 'earthquake', 'animal_incident'].forEach(type => {
+            const el = document.getElementById(`${type}-count`);
+            if (el) el.textContent = '0';
+          });
+        });
+
+      // List of Nepal cities for AQI fetching
+      const cities = [
+        { city: 'Kathmandu', state: 'Bagmati' },
+        { city: 'Lalitpur', state: 'Bagmati' },
+        { city: 'Bhaktapur', state: 'Bagmati' },
+        { city: 'Pokhara', state: 'Gandaki' },
+        { city: 'Butwal', state: 'Lumbini' },
+        { city: 'Bhairahawa', state: 'Lumbini' },
+        { city: 'Nepalgunj', state: 'Lumbini' },
+        { city: 'Dhangadhi', state: 'Sudurpashchim' },
+        { city: 'Biratnagar', state: 'Koshi' },
+        { city: 'Dharan', state: 'Koshi' },
+        { city: 'Itahari', state: 'Koshi' },
+        { city: 'Janakpur', state: 'Madhesh' },
+        { city: 'Birgunj', state: 'Madhesh' },
+        { city: 'Hetauda', state: 'Bagmati' },
+        { city: 'Gorkha', state: 'Gandaki' },
+        { city: 'Tulsipur', state: 'Lumbini' },
+        { city: 'Bardibas', state: 'Madhesh' },
+        { city: 'Kohalpur', state: 'Lumbini' },
+        { city: 'Beni', state: 'Gandaki' },
+        { city: 'Rajbiraj', state: 'Koshi' },
+        { city: 'Panauti', state: 'Bagmati' },
+        { city: 'Dhulikhel', state: 'Bagmati' },
+        { city: 'Gaur', state: 'Madhesh' },
+        { city: 'Jaleshwar', state: 'Madhesh' },
+        { city: 'Tansen', state: 'Lumbini' },
+        { city: 'Waling', state: 'Gandaki' },
+        { city: 'Putalibazar', state: 'Gandaki' },
+        { city: 'Lumbini', state: 'Lumbini' },
+        { city: 'Chitwan', state: 'Bagmati' },
+        { city: 'Simara', state: 'Madhesh' },
+        { city: 'Birtamod', state: 'Koshi' },
+        { city: 'Damak', state: 'Koshi' },
+        { city: 'Banepa', state: 'Bagmati' }
+      ];
+
+
+      const API_KEY = 'YOUR_API_KEY'; // Replace with your IQAir API key
+
+      // Fetch AQI for all cities and add markers
+      cities.forEach(async ({ city, state }) => {
+        try {
+          const res = await fetch(`https://api.airvisual.com/v2/city?city=${encodeURIComponent(city)}&state=${encodeURIComponent(state)}&country=Nepal&key=${ba4bbb29 - 369e-4334 - a21f - fd3629e3f7b2}`);
+          const data = await res.json();
+
+          if (data.status === 'success') {
+            const aqi = data.data.current.pollution.aqius;
+            const lat = data.data.location.coordinates[1];
+            const lon = data.data.location.coordinates[0];
+
+            // Add AQI marker colored by AQI level
+            const color = aqi <= 50 ? 'green' : aqi <= 100 ? 'orange' : 'red';
+
+            const marker = L.circleMarker([lat, lon], {
+              radius: 10,
+              fillColor: color,
+              color: '#000',
+              weight: 1,
+              fillOpacity: 0.8
+            }).bindPopup(`<strong>${city}</strong><br>AQI (US): ${aqi}`);
+
+            aqiLayer.addLayer(marker);
+          } else {
+            console.warn(`${city} AQI data not available.`);
+          }
+        } catch (error) {
+          console.error(`Error fetching AQI for ${city}:`, error);
+        }
+      });
+
+      // Layer toggle control UI
+      const LayerToggleControl = L.Control.extend({
+        onAdd: function () {
+          const container = L.DomUtil.create('div', 'leaflet-bar layer-toggle-control');
+
+          const btn = L.DomUtil.create('button', 'layer-toggle-btn', container);
+          btn.title = 'Toggle Layers';
+          btn.innerHTML = '<i class="fas fa-layer-group"></i>';
+
+          const panel = L.DomUtil.create('div', 'layer-toggle-panel', container);
+          panel.style.display = 'none';
+          panel.innerHTML = `
+        <label><input type="checkbox" id="toggleAQI" checked>AQI</label>
+        <label><input type="checkbox" id="toggleFlood" checked>Flood</label>
+        <label><input type="checkbox" id="toggleLandslide" checked>Landslide</label>
+        <label><input type="checkbox" id="toggleFire" checked>Fire</label>
+        <label><input type="checkbox" id="toggleRain" checked>Heavy Rainfall</label>
+        <label><input type="checkbox" id="toggleEarthquake" checked>Earthquake</label>
+        <label><input type="checkbox" id="toggleAnimal" checked>Animal Incident</label>
+      `;
+
+          L.DomEvent.on(btn, 'click', () => {
+            panel.style.display = panel.style.display === 'none' || panel.style.display === '' ? 'block' : 'none';
+          });
+
+          L.DomEvent.disableClickPropagation(container);
+          return container;
+        }
+      });
+
+      map.addControl(new LayerToggleControl());
+
+      // Setup toggle handlers
+      function setupLayerToggles() {
+        document.getElementById('toggleAQI').addEventListener('change', e => {
+          if (e.target.checked) map.addLayer(aqiLayer);
+          else map.removeLayer(aqiLayer);
+        });
+        document.getElementById('toggleFlood').addEventListener('change', e => {
+          if (e.target.checked) map.addLayer(floodLayer);
+          else map.removeLayer(floodLayer);
+        });
+        document.getElementById('toggleLandslide').addEventListener('change', e => {
+          if (e.target.checked) map.addLayer(landslideLayer);
+          else map.removeLayer(landslideLayer);
+        });
+        document.getElementById('toggleFire').addEventListener('change', e => {
+          if (e.target.checked) map.addLayer(fireLayer);
+          else map.removeLayer(fireLayer);
+        });
+        document.getElementById('toggleRain').addEventListener('change', e => {
+          if (e.target.checked) map.addLayer(rainLayer);
+          else map.removeLayer(rainLayer);
+        });
+        document.getElementById('toggleEarthquake').addEventListener('change', e => {
+          if (e.target.checked) map.addLayer(earthquakeLayer);
+          else map.removeLayer(earthquakeLayer);
+        });
+        document.getElementById('toggleAnimal').addEventListener('change', e => {
+          if (e.target.checked) map.addLayer(animalLayer);
+          else map.removeLayer(animalLayer);
+        });
+      }
+
+      setupLayerToggles();
+    });
+
+  </script>
+</body>
+
+</html>

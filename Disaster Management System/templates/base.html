@@ -1,0 +1,2438 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Appati Parisara Darshanam</title>
+
+  <!-- CSS Links -->
+  <link rel="stylesheet" href="{% static 'style.css' %}">
+
+  <link rel="stylesheet" href="{% static 'about/about.css' %}" />
+  <link rel="stylesheet"
+    href="https://cdn-uicons.flaticon.com/3.0.0/uicons-regular-rounded/css/uicons-regular-rounded.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet-measure@3.1.0/dist/leaflet-measure.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+
+
+  <!-- JavaScript Links -->
+  <script src="https://unpkg.com/leaflet-image/leaflet-image.js"></script>
+  <script src="{% static 'about/about.js' %}"></script>
+  <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/leaflet-measure@3.1.0/dist/leaflet-measure.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@turf/turf@6.5.0/turf.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+  <style>
+    /* Analysis dialog styles */
+    .analysis-dialog {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
+      z-index: 10001;
+      width: 300px;
+      max-width: 90%;
+    }
+
+    .analysis-dialog h3 {
+      margin-top: 0;
+      color: #2c3e50;
+    }
+
+    .analysis-dialog label {
+      display: block;
+      margin: 10px 0 5px;
+    }
+
+    .analysis-dialog input,
+    .analysis-dialog select {
+      width: 100%;
+      padding: 8px;
+      box-sizing: border-box;
+      margin-bottom: 10px;
+    }
+
+    .analysis-dialog-buttons {
+      margin-top: 15px;
+      text-align: right;
+    }
+
+    .analysis-dialog button {
+      padding: 8px 15px;
+      margin-left: 10px;
+      cursor: pointer;
+    }
+
+    .select-mode-active {
+      background-color: #4CAF50 !important;
+      color: white !important;
+    }
+
+    /* Incident data panel */
+    #incident-data-panel {
+      position: fixed;
+      top: 50%;
+      left: 70px;
+      transform: translateY(-50%);
+      background: white;
+      padding: 15px;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+      z-index: 1000;
+      width: 300px;
+      max-height: 80vh;
+      overflow-y: auto;
+      display: none;
+    }
+
+    #incident-data-panel h3 {
+      margin-top: 0;
+      border-bottom: 1px solid #eee;
+      padding-bottom: 10px;
+    }
+
+    .incident-item {
+      padding: 10px;
+      border-bottom: 1px solid #eee;
+      cursor: pointer;
+    }
+
+    .incident-item:hover {
+      background: #f5f5f5;
+    }
+
+    .incident-item h4 {
+      margin: 0 0 5px 0;
+      color: #2c3e50;
+    }
+
+    .incident-item p {
+      margin: 0;
+      font-size: 0.9em;
+      color: #7f8c8d;
+    }
+
+    .close-panel {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: none;
+      border: none;
+      font-size: 18px;
+      cursor: pointer;
+    }
+
+    /* Realtime dashboard panel */
+    #realtime-dashboard {
+      position: fixed;
+      bottom: 0;
+      left: 60px;
+      right: 0;
+      background: white;
+      padding: 10px;
+      box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+      z-index: 1000;
+      display: none;
+    }
+
+    .incident-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 10px;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .incident-box {
+      background: #fff;
+      padding: 10px;
+      border: 1px solid #ddd;
+      text-align: center;
+      font-size: 14px;
+      color: #d32f2f;
+      font-weight: bold;
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    /* Hospital popup styles */
+    .hospital-popup {
+      max-width: 250px;
+    }
+
+    .hospital-popup b {
+      color: #e74c3c;
+    }
+
+    /* Hospital route styles */
+    .route-popup {
+      max-width: 300px;
+    }
+
+    .route-info {
+      margin: 10px 0;
+      padding: 10px;
+      background: #f5f5f5;
+      border-radius: 4px;
+    }
+
+    .route-line {
+      stroke: #e74c3c;
+      stroke-width: 3;
+      stroke-dasharray: 5, 5;
+      fill: none;
+    }
+
+    /* Evacuation center styles */
+    .evacuation-center {
+      background-color: rgba(0, 123, 255, 0.6);
+      border-radius: 50%;
+      color: white;
+      height: 40px;
+      padding: 10px;
+      width: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+    }
+
+    /* Classification legend */
+    .classification-legend {
+      position: fixed;
+      bottom: 100px;
+      right: 10px;
+      z-index: 1000;
+      background: white;
+      padding: 10px;
+      border-radius: 4px;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      margin: 5px 0;
+    }
+
+    .legend-color {
+      width: 20px;
+      height: 20px;
+      margin-right: 8px;
+      border: 1px solid #333;
+    }
+  </style>
+</head>
+
+<body>
+  <!-- Sidebar Navigation -->
+  <div class="sidebar left">
+    <button title="Home">
+      <img src="https://cdn-icons-png.flaticon.com/512/263/263115.png" alt="Home Icon" width="20" />
+      Home
+    </button>
+    <button id='btnIncidents' title="Incidents">
+      <img src="https://cdn-icons-png.flaticon.com/512/11951/11951187.png" alt="Incident Icon" width="20" />
+      Incidents
+    </button>
+    <button id="realtime-btn" title="RealTime">
+      <img src="https://cdn-icons-png.flaticon.com/512/8905/8905275.png" alt="RealTime Icon" width="20" />
+      RealTime
+    </button>
+    <div class="sidebar-analysis">
+      <button id="analysis-btn" title="Analysis">
+        <img src="https://cdn-icons-png.flaticon.com/512/809/809497.png" alt="Analysis Icon" width="20" />
+        Analysis
+      </button>
+      <div id="analysis-panel" class="analysis-panel">
+        <div class="analysis-option-wrapper">
+          <button class="analysis-option" id="spatial-btn">Spatial</button>
+          <div class="analysis-dropdown" id="spatial-dropdown">
+            <button id="buffer-btn">Buffer</button>
+            <button id="proximity-btn">Proximity</button>
+            <button id="evacuation-btn">Evacuation</button>
+          </div>
+        </div>
+        <hr />
+        <div class="analysis-option-wrapper">
+          <button class="analysis-option" id="attribute-btn">Attribute</button>
+          <div class="analysis-dropdown" id="attribute-dropdown">
+            <button id="filter-btn">Filter</button>
+            <button id="classification-btn">Classification</button>
+            <button id="statistics-btn">Statistics</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {% if user.is_authenticated %}
+
+    <!-- Profile toggle button -->
+    <button onclick="toggleProfile()" id="toggleProfileBtn" class="btn btn-outline-success"
+      style="margin-bottom: 10px;">
+      <img src="https://cdn-icons-png.flaticon.com/512/1144/1144760.png" alt="Profile Icon" width="20" />
+      {{ user.first_name|default:user.username }}
+    </button>
+
+    <!-- Floating Profile Box -->
+    <div id="profile-box" class="profile-box" style="display: none;">
+      <div class="card p-4 border-0 rounded-4 bg-white position-relative shadow-lg">
+        <!-- Close button -->
+        <button onclick="closeProfile()" class="btn-close position-absolute top-0 end-0 m-2"
+          aria-label="Close"></button>
+
+        <div class="text-center mb-3">
+          <h5 class="text-success fw-bold">👤 Your Profile</h5>
+          <hr>
+        </div>
+
+        <p><strong>Username:</strong> {{ user.username }}</p>
+        <p><strong>Email:</strong> {{ user.email }}</p>
+        <p><strong>Role:</strong> Disaster Analyst</p>
+        <p>
+          <strong>Uploads:</strong>
+          <a href="#report-incident-btn" class="text-primary fw-bold text-decoration-none">0</a>
+        </p>
+
+        <div class="text-center mt-3">
+          <a href="{% url 'signout' %}" class="btn btn-danger btn-sm">Logout</a>
+        </div>
+      </div>
+    </div>
+
+    <style>
+      .profile-box {
+        position: fixed;
+        top: 100px;
+        right: 40px;
+        width: 320px;
+        z-index: 2000;
+        transition: opacity 0.3s ease, transform 0.3s ease;
+      }
+
+      #profile-box[style*="display: none"] {
+        opacity: 0;
+        transform: scale(0.95);
+      }
+
+      #profile-box[style*="display: block"] {
+        opacity: 1;
+        transform: scale(1);
+      }
+
+      .profile-box .card {
+        background: #f1f5ff;
+        border: 2px solid #007bff;
+        border-radius: 18px;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+        text-align: center;
+      }
+
+      .profile-box .card h5 {
+        color: #007bff;
+        margin-bottom: 10px;
+      }
+
+      .profile-box .card p {
+        margin: 6px 0;
+      }
+
+      .profile-box .btn-close {
+        filter: brightness(0.5);
+      }
+
+      .profile-box .btn {
+        margin-top: 10px;
+      }
+    </style>
+
+
+
+    <script>
+      function toggleProfile() {
+        const box = document.getElementById("profile-box");
+        box.style.display = (box.style.display === "block") ? "none" : "block";
+      }
+
+      function closeProfile() {
+        document.getElementById("profile-box").style.display = "none";
+      }
+
+      // Close on outside click
+      document.addEventListener("click", function (event) {
+        const profileBox = document.getElementById("profile-box");
+        const toggleBtn = document.getElementById("toggleProfileBtn");
+        if (
+          profileBox &&
+          profileBox.style.display === "block" &&
+          !profileBox.contains(event.target) &&
+          !toggleBtn.contains(event.target)
+        ) {
+          profileBox.style.display = "none";
+        }
+      });
+    </script>
+
+    {% else %}
+
+    <!-- Show Login/Register buttons only if NOT logged in -->
+    <a href="{% url 'signin' %}" target="_blank" title="Login">
+      <button>
+        <img src="https://cdn-icons-png.flaticon.com/512/7542/7542114.png" alt="Login Icon" width="20" />
+        Login
+      </button>
+    </a>
+
+    <a href="{% url 'signup' %}" target="_blank" title="Sign Up">
+      <button>
+        <img src="https://cdn-icons-png.flaticon.com/512/1828/1828427.png" alt="Register Icon" width="20" />
+        Register
+      </button>
+    </a>
+
+    {% endif %}
+
+    <button id="report-incident-btn" title="Report Incident">
+      <img src="https://cdn-icons-png.flaticon.com/512/9897/9897198.png" alt="Report Icon" width="20" />
+      Report Incident
+    </button>
+    <button id="helpline-btn" title="Helpline">
+      <img src="https://cdn-icons-png.flaticon.com/512/9240/9240951.png" alt="Helpline Icon" width="20" />
+      Helpline
+    </button>
+
+    <a href="{% url 'about' %}" target="_blank" title="About Us" style="text-decoration: none;">
+      <button>
+        <img src="https://cdn-icons-png.flaticon.com/512/3786/3786367.png" alt="AboutUs Icon" width="20" />
+        About Us
+      </button>
+    </a>
+
+  </div>
+
+  <!-- Incident Data Panel -->
+  <div id="incident-data-panel">
+    <button class="close-panel" id="close-incident-panel">×</button>
+    <h3>Incident Data</h3>
+    <div id="incident-list"></div>
+  </div>
+
+  <!-- Realtime Dashboard Panel -->
+  <div id="realtime-dashboard">
+    <div class="incident-grid">
+      <div class="incident-box"><i class="fas fa-water"></i> Flood (<span id="flood-count">0</span>)</div>
+      <div class="incident-box"><i class="fas fa-mountain"></i> Landslide (<span id="landslide-count">0</span>)</div>
+      <div class="incident-box"><i class="fas fa-fire"></i> Fire (<span id="fire-count">0</span>)</div>
+      <div class="incident-box"><i class="fas fa-cloud-rain"></i> Heavy Rain (<span id="rain-count">0</span>)</div>
+      <div class="incident-box"><i class="fas fa-house-damage"></i> Earthquake (<span id="earthquake-count">0</span>)
+      </div>
+      <div class="incident-box"><i class="fas fa-paw"></i> Animal (<span id="animal-count">0</span>)</div>
+      <div class="incident-box"><i class="fas fa-lungs"></i> AQI (<span id="aqi-count">0</span>)</div>
+    </div>
+    <div style="text-align: center; margin-top: 10px; font-size: 12px;">
+      <span id="update-status"><i class="fas fa-check-circle"></i> Live</span> |
+      <span id="last-updated">Last update: Never</span> |
+      <button id="refresh-btn" style="background: none; border: none; cursor: pointer;">
+        <i class="fas fa-sync-alt"></i> Refresh
+      </button>
+    </div>
+  </div>
+
+  <!-- Helpline Modal -->
+  <div id="helpline-modal" style="display:none; position:fixed; top:50%; left:50%; 
+  transform: translate(-50%, -50%); background:white; padding:20px; max-width:500px; 
+  width:90%; border:2px solid #c0392b; z-index:10000;">
+
+    <button id="close-helpline" style="float:right; background:#c0392b; color:#fff; 
+    border:none; padding:5px 10px; cursor:pointer;">Close</button>
+
+    <h2 style="color:#c0392b; margin-top:0;">Emergency & Disaster Helplines - Nepal</h2>
+
+    <p>In case of emergencies, contact the following authorities:</p>
+
+    <table style="width: 100%; border-collapse: collapse; font-size: 16px;">
+      <thead style="background-color: #c0392b; color: white;">
+        <tr>
+          <th style="padding: 10px; border: 1px solid #ddd;">Organization</th>
+          <th style="padding: 10px; border: 1px solid #ddd;">Contact Number</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td style="padding: 10px; border: 1px solid #ddd;">National Emergency Operation Center (NEOC)</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">+977-1-4211203 / 104</td>
+        </tr>
+        <tr>
+          <td style="padding: 10px; border: 1px solid #ddd;">Nepal Police</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">100</td>
+        </tr>
+        <tr>
+          <td style="padding: 10px; border: 1px solid #ddd;">Armed Police Force (APF)</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">1114</td>
+        </tr>
+        <tr>
+          <td style="padding: 10px; border: 1px solid #ddd;">Nepal Army Emergency</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">102</td>
+        </tr>
+        <tr>
+          <td style="padding: 10px; border: 1px solid #ddd;">Fire Brigade (Kathmandu)</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">101</td>
+        </tr>
+        <tr>
+          <td style="padding: 10px; border: 1px solid #ddd;">Red Cross Blood Bank</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">+977-1-4225344</td>
+        </tr>
+        <tr>
+          <td style="padding: 10px; border: 1px solid #ddd;">Ambulance Services</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">102 / 103</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Top Control Panel -->
+  <div class="top-control-bar">
+    <div class="panel-box">
+      <button class="toggle-btn" title="Download Options">
+        <img src="https://cdn-icons-png.flaticon.com/512/9758/9758202.png" alt="Download" />
+      </button>
+      <div class="dropdown-panel">
+        <button title="Download Map">Download Map</button>
+        <button title="Download CSV" id="export-csv-btn">Download CSV</button>
+        <button title="Download Report">Download Report</button>
+      </div>
+    </div>
+
+    <div class="panel-box">
+      <button class="toggle-btn" title="Base Maps">
+        <img src="https://cdn-icons-png.flaticon.com/512/15068/15068304.png" alt="Tiles" />
+      </button>
+      <div class="dropdown-panel">
+        <button class="basemap-btn" data-basemap="osm">OpenStreetMap</button>
+        <button class="basemap-btn" data-basemap="satellite">Satellite</button>
+        <button class="basemap-btn" data-basemap="terrain">Terrain</button>
+        <button class="basemap-btn" data-basemap="political">Political</button>
+      </div>
+    </div>
+
+    <div class="panel-box">
+      <button class="toggle-btn" title="Overlay Layers">
+        <img src="https://cdn-icons-png.flaticon.com/512/2736/2736622.png" alt="Layers" />
+      </button>
+      <div class="dropdown-panel">
+        <label><input type="checkbox" class="layer-toggle" data-layer="province" checked /> Province </label>
+        <label><input type="checkbox" class="layer-toggle" data-layer="district" checked /> District </label>
+        <label><input type="checkbox" class="layer-toggle" data-layer="ward" /> Local-Level</label>
+      </div>
+    </div>
+  </div>
+
+  <!-- Map Controls -->
+  <div class="map-control-panel" role="group" aria-label="Map controls">
+    <button class="map-btn" title="Zoom In" id="zoom-in-btn">
+      <img src="https://cdn-icons-png.flaticon.com/512/992/992651.png" alt="Zoom In" />
+    </button>
+    <button class="map-btn" title="Zoom Out" id="zoom-out-btn">
+      <img src="https://cdn-icons-png.flaticon.com/512/992/992683.png" alt="Zoom Out" />
+    </button>
+
+    <div style="position: relative; display: inline-block;">
+      <button class="map-btn" title="Search Location" id="search-location-btn">
+        <img src="https://cdn-icons-png.flaticon.com/512/622/622669.png" alt="Search Location" />
+      </button>
+
+      <div id="search-box"
+        style="display: none; position: absolute; top: 0; left: -800%; background: white; padding: 8px; border-radius: 6px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2); z-index: 1000; white-space: nowrap;">
+        <input type="text" id="search-input" placeholder="e.g. Biratnagar or 27.2,86.3"
+          style="padding: 4px 6px; width: 180px;" />
+        <button id="submit-search" style="padding: 4px 8px; margin-left: 4px;">Go</button>
+      </div>
+
+      <div id="search-message"
+        style="display: none; position: absolute; top: 160%; left: 50%; transform: translateX(-50%); padding: 6px 10px; background: rgba(0,0,0,0.8); color: white; border-radius: 4px; white-space: nowrap; z-index: 1000;">
+      </div>
+    </div>
+
+    <button class="map-btn" title="Set Location" id="set-location-btn">
+      <img src="https://cdn-icons-png.flaticon.com/512/2910/2910793.png" alt="Set Location" />
+    </button>
+
+    <button class="map-btn" title="Measure Tool" id="measure-btn">
+      <img src="https://cdn-icons-png.flaticon.com/512/1085/1085192.png" alt="Measure Icon" width="20" />
+    </button>
+    <button class="map-btn" title="Select Mode" id="select-toggle-btn">
+      <img src="https://cdn-icons-png.flaticon.com/512/1827/1827301.png" alt="Select Icon" width="20" />
+    </button>
+  </div>
+
+  <!-- Leaflet Map -->
+  <div id="map" style="position:absolute; top:0; left:0; width:100%; height:100vh; z-index:0;"></div>
+  <button id="clear-map-btn"
+    style="position: absolute; top: 10px; right: 50px; z-index: 1000; padding: 6px 12px; background: #ffffff; color: rgb(24, 24, 24); border: none; border-radius: 4px; cursor: pointer;">Clear
+    Map</button>
+
+  <!-- Incident Report Modal -->
+  <div id="incident-modal"
+    style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 20px; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.3); z-index: 10000; width: 300px; max-width: 90%;">
+    <h3>Report Incident</h3>
+    <form id="incident-form">
+      <label for="incident-type">Incident Type:</label><br />
+      <select id="incident-type" required>
+        <option value="">Select type</option>
+        <option value="Flood">Flood</option>
+        <option value="Landslide">Landslide</option>
+        <option value="Earthquake">Earthquake</option>
+        <option value="Fire">Fire</option>
+        <option value="Epidemic">Epidemic</option>
+        <option value="Animal Incident">Animal Incident</option>
+        <option value="Other">Other</option>
+      </select><br /><br />
+
+      <label for="incident-severity">Severity:</label><br />
+      <select id="incident-severity" required>
+        <option value="Low">Low</option>
+        <option value="Medium">Medium</option>
+        <option value="High">High</option>
+        <option value="Critical">Critical</option>
+      </select><br /><br />
+
+      <label for="incident-desc">Description:</label><br />
+      <textarea id="incident-desc" required></textarea><br /><br />
+
+      <label for="incident-lat">Latitude:</label><br />
+      <input type="number" id="incident-lat" step="any" required /><br /><br />
+
+      <label for="incident-lng">Longitude:</label><br />
+      <input type="number" id="incident-lng" step="any" required /><br /><br />
+
+      <label for="incident-image">Upload Image:</label><br />
+      <input type="file" id="incident-image" accept="image/*" /><br /><br />
+
+      <img id="image-preview"
+        style="display: none; max-width: 100%; max-height: 150px; margin-bottom: 10px; border: 1px solid #ccc; padding: 4px; border-radius: 4px;"
+        alt="Preview" />
+
+      <button type="submit">Submit</button>
+      <button type="button" id="cancel-incident-btn">Cancel</button>
+    </form>
+  </div>
+
+  <script>
+    // Initialize the map
+    const map = L.map('map', { zoomControl: false }).setView([27.7172, 85.3240], 8);
+    const downloadMapBtn = document.querySelector('[title="Download Map"]');
+    downloadMapBtn.addEventListener('click', () => {
+      leafletImage(map, function (err, canvas) {
+        if (err) {
+          console.error('Map export failed:', err);
+          return;
+        }
+
+        const link = document.createElement('a');
+        link.download = 'map.png';
+        link.href = canvas.toDataURL();
+        link.click();
+      });
+    });
+
+    // Base layers
+    const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap contributors'
+    }).addTo(map);
+
+    const satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+      attribution: '© Esri'
+    });
+
+    const terrain = L.tileLayer('https://tile.opentopomap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenTopoMap'
+    });
+
+    const politicalBase = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+      attribution: '© OpenStreetMap contributors © CARTO'
+    });
+
+    let currentBaseLayer = osm;
+
+    // Overlay layers
+    const provinceLayer = L.geoJSON(null, {
+      style: { color: '#101010', weight: 2, fillOpacity: 0.1 }
+    }).addTo(map);
+
+    const districtLayer = L.geoJSON(null, {
+      style: { color: '#101010', weight: 1, fillOpacity: 0.1 }
+    }).addTo(map);
+
+    const wardLayer = L.geoJSON(null, {
+      style: { color: '#101010', weight: 0.5, fillOpacity: 0.1 }
+    });
+
+    // Load GeoJSON data
+    Promise.all([
+      fetch('{% static "npl1.geojson" %}').then(res => res.json()).then(data => provinceLayer.addData(data)),
+      fetch('{% static "npl2.geojson" %}').then(res => res.json()).then(data => districtLayer.addData(data)),
+      fetch('{% static "npl3.geojson" %}').then(res => res.json()).then(data => wardLayer.addData(data))
+    ]).catch(err => console.error('Error loading GeoJSON:', err));
+
+    // Incident data
+    let incidentGeoJSON = { type: "FeatureCollection", features: [] };
+    let selectedFeatures = new Set();
+    let selectMode = false;
+    let incidentLayer = null;
+    let geojsonLayers = [];
+    let searchMarker = null;
+    let locationMarker = null;
+    let hospitalLayer = null;
+    let routeLayer = null;
+    let evacuationLayer = null;
+    let bufferLayer = null;
+    let filteredLayer = null;
+    let classificationLayer = null;
+    let classificationLegend = null;
+
+    // Realtime data layers
+    const floodLayer = L.layerGroup().addTo(map);
+    const landslideLayer = L.layerGroup().addTo(map);
+    const fireLayer = L.layerGroup().addTo(map);
+    const rainLayer = L.layerGroup().addTo(map);
+    const earthquakeLayer = L.layerGroup().addTo(map);
+    const animalLayer = L.layerGroup().addTo(map);
+    const aqiLayer = L.layerGroup().addTo(map);
+
+    const hazardColors = {
+      Flood: "#007BFF",
+      Landslide: "#FF5733",
+      Earthquake: "#FFD700",
+      Fire: "#DC143C",
+      Epidemic: "#32CD32",
+      "Animal Incident": "#999999",
+      Other: "#888888",
+      Default: "#888"
+    };
+
+    const severityColors = {
+      Low: "#4CAF50",
+      Medium: "#FFC107",
+      High: "#FF9800",
+      Critical: "#F44336"
+    };
+
+    // Measure control
+    const measureControl = new L.Control.Measure({
+      position: 'topright',
+      primaryLengthUnit: 'meters',
+      secondaryLengthUnit: 'kilometers',
+      primaryAreaUnit: 'sqmeters',
+      secondaryAreaUnit: 'hectares',
+      activeColor: '#e74c3c',
+      completedColor: '#2ecc71',
+      popupOptions: { className: 'leaflet-measure-resultpopup', autoPanPadding: [10, 10] }
+    });
+
+    let measureActive = false;
+
+    // Load incidents data from CSV
+    async function loadIncidents() {
+      try {
+        const response = await fetch('{% static "incident_geocoded.csv" %}');
+        const csvText = await response.text();
+        const data = Papa.parse(csvText, { header: true, skipEmptyLines: true });
+
+        incidentGeoJSON.features = data.data.map((row, index) => {
+          const lat = parseFloat(row.Latitude);
+          const lng = parseFloat(row.Longitude);
+
+          if (isNaN(lat) || isNaN(lng)) return null;
+
+          return {
+            type: "Feature",
+            geometry: { type: "Point", coordinates: [lng, lat] },
+            properties: {
+              ...row,
+              id: index,
+              Severity: row.Severity || 'Medium'
+            }
+          };
+        }).filter(Boolean);
+
+        drawIncidents();
+        updateIncidentPanel();
+      } catch (error) {
+        console.error('Error loading incidents:', error);
+        alert('Failed to load incident data');
+      }
+    }
+
+    // Draw incidents on map
+    function drawIncidents() {
+      if (incidentLayer) map.removeLayer(incidentLayer);
+
+      incidentLayer = L.geoJSON(incidentGeoJSON, {
+        pointToLayer: (feature, latlng) => {
+          const color = selectedFeatures.has(feature.properties.id) ? 'lime' : '#000';
+          return L.circleMarker(latlng, {
+            radius: 6,
+            fillColor: hazardColors[feature.properties.Hazard] || hazardColors.Default,
+            color,
+            weight: 2,
+            fillOpacity: 0.8
+          });
+        },
+        onEachFeature: (feature, layer) => {
+          layer.on('click', function () {
+            if (!selectMode) return;
+            const id = feature.properties.id;
+            if (selectedFeatures.has(id)) {
+              selectedFeatures.delete(id);
+              layer.setStyle({ color: '#000' });
+            } else {
+              selectedFeatures.add(id);
+              layer.setStyle({ color: 'lime' });
+            }
+          });
+
+          const severityColor = severityColors[feature.properties.Severity] || '#888';
+          const severityMarker = `<span style="display:inline-block; width:10px; height:10px; background-color:${severityColor}; border-radius:50%; margin-right:5px;"></span>`;
+
+          layer.bindPopup(`
+            <b>${feature.properties.Title || 'Incident'}</b><br>
+            <b>Type:</b> ${feature.properties.Hazard}<br>
+            <b>Severity:</b> ${severityMarker} ${feature.properties.Severity}<br>
+            <b>Date:</b> ${feature.properties["Incident on"] || 'Unknown'}<br>
+            <b>Description:</b> ${feature.properties.Description || 'None'}
+          `);
+        }
+      }).addTo(map);
+    }
+
+    // Update incident data panel
+    function updateIncidentPanel() {
+      const incidentList = document.getElementById('incident-list');
+      incidentList.innerHTML = '';
+
+      incidentGeoJSON.features.forEach(feature => {
+        const item = document.createElement('div');
+        item.className = 'incident-item';
+        item.innerHTML = `
+          <h4>${feature.properties.Title || 'Incident'}</h4>
+          <p><b>Type:</b> ${feature.properties.Hazard}</p>
+          <p><b>Date:</b> ${feature.properties["Incident on"] || 'Unknown'}</p>
+        `;
+
+        item.addEventListener('click', () => {
+          map.setView([
+            feature.geometry.coordinates[1],
+            feature.geometry.coordinates[0]
+          ], 12);
+
+          // Open popup if available
+          const layer = incidentLayer.getLayer(feature.properties.id);
+          if (layer) {
+            layer.openPopup();
+          }
+        });
+
+        incidentList.appendChild(item);
+      });
+    }
+
+    // Get selected features
+    function getSelectedFeatures() {
+      return incidentGeoJSON.features.filter(f => selectedFeatures.has(f.properties.id));
+    }
+
+    // Enhanced proximity analysis with custom hospital markers
+    function runProximity() {
+      const features = getSelectedFeatures();
+      if (features.length < 1) return alert("Please select at least one point.");
+
+      // Create dialog for proximity input
+      const dialog = document.createElement('div');
+      dialog.className = 'analysis-dialog';
+      dialog.innerHTML = `
+        <h3>Find Nearby Hospitals</h3>
+        <label for="proximity-distance">Search Distance (km):</label>
+        <input type="number" id="proximity-distance" value="5" min="0.1" step="0.1">
+        <div class="analysis-dialog-buttons">
+          <button id="cancel-proximity">Cancel</button>
+          <button id="apply-proximity">Find Hospitals</button>
+        </div>
+      `;
+
+      document.body.appendChild(dialog);
+
+      document.getElementById('cancel-proximity').addEventListener('click', () => {
+        document.body.removeChild(dialog);
+      });
+
+      document.getElementById('apply-proximity').addEventListener('click', async () => {
+        const distance = parseFloat(document.getElementById('proximity-distance').value);
+
+        if (isNaN(distance)) {
+          alert("Please enter a valid number");
+          return;
+        }
+
+        const center = features[0]; // Use first selected point as center
+        const centerLatLng = [center.geometry.coordinates[1], center.geometry.coordinates[0]];
+
+        try {
+          // Show loading message
+          const loadingMsg = L.popup()
+            .setLatLng(centerLatLng)
+            .setContent('<div style="padding:10px;"><b>Loading hospital data...</b><br>Querying OpenStreetMap</div>')
+            .openOn(map);
+
+          // Query Overpass API for hospitals
+          const radius = distance * 1000; // Convert km to meters
+          const [lng, lat] = center.geometry.coordinates;
+
+          const query = `[out:json][timeout:30];
+            (
+              node["amenity"="hospital"](around:${radius},${lat},${lng});
+              way["amenity"="hospital"](around:${radius},${lat},${lng});
+              relation["amenity"="hospital"](around:${radius},${lat},${lng});
+            );
+            out body;
+            >;
+            out skel qt;`;
+
+          const response = await fetch(`https://overpass-api.de/api/interpreter?data=${encodeURIComponent(query)}`);
+          const data = await response.json();
+
+          map.closePopup(loadingMsg);
+
+          if (!data.elements || data.elements.length === 0) {
+            alert("No hospitals found in the specified area");
+            return;
+          }
+
+          // Process OSM data
+          const hospitals = data.elements
+            .filter(el => el.tags && el.tags.name)
+            .map(el => {
+              let point;
+              if (el.type === 'node') {
+                point = turf.point([el.lon, el.lat]);
+              } else if (el.center) {
+                point = turf.point([el.center.lon, el.center.lat]);
+              } else {
+                return null;
+              }
+
+              if (!point) return null;
+
+              const dist = turf.distance(center, point, { units: 'kilometers' });
+
+              return {
+                type: "Feature",
+                geometry: point.geometry,
+                properties: {
+                  name: el.tags.name,
+                  distance: dist,
+                  type: el.tags.amenity || 'medical',
+                  address: el.tags['addr:full'] || el.tags['addr:street'] || '',
+                  phone: el.tags.phone || '',
+                  website: el.tags.website || '',
+                  osmId: el.id
+                }
+              };
+            })
+            .filter(Boolean)
+            .sort((a, b) => a.properties.distance - b.properties.distance);
+
+          // Create circle to show the search area
+          const circle = turf.circle(center.geometry.coordinates, distance, {
+            steps: 64,
+            units: 'kilometers'
+          });
+
+          addSelectableGeoJSON(circle, {
+            color: '#33aa33',
+            fillOpacity: 0.1,
+            fillColor: '#33aa33'
+          });
+
+          // Create custom hospital icon
+          const hospitalIcon = L.icon({
+            iconUrl: 'https://cdn-icons-png.flaticon.com/512/2069/2069571.png', // Hospital icon
+            iconSize: [32, 32], // size of the icon
+            iconAnchor: [16, 32], // point of the icon which will correspond to marker's location
+            popupAnchor: [0, -32] // point from which the popup should open relative to the iconAnchor
+          });
+
+          // Create hospital layer with custom markers and detailed popups
+          if (hospitalLayer) map.removeLayer(hospitalLayer);
+
+          hospitalLayer = L.geoJSON({
+            type: 'FeatureCollection',
+            features: hospitals
+          }, {
+            pointToLayer: (feature, latlng) => {
+              return L.marker(latlng, {
+                icon: hospitalIcon,
+                title: feature.properties.name
+              });
+            },
+            onEachFeature: (feature, layer) => {
+              const props = feature.properties;
+
+              layer.bindPopup(`
+                <div class="hospital-popup">
+                  <b>${props.name}</b>
+                  <p><i class="fas fa-route"></i> ${props.distance.toFixed(2)} km from selected point</p>
+                  ${props.address ? `<p><i class="fas fa-map-marker-alt"></i> ${props.address}</p>` : ''}
+                  ${props.phone ? `<p><i class="fas fa-phone"></i> ${props.phone}</p>` : ''}
+                  ${props.website ? `<p><i class="fas fa-globe"></i> <a href="${props.website}" target="_blank">Website</a></p>` : ''}
+                </div>
+              `);
+            }
+          }).addTo(map);
+
+          geojsonLayers.push(hospitalLayer);
+
+          // Fit bounds to show both center and hospitals
+          const hospitalBounds = hospitalLayer.getBounds();
+          const centerPoint = L.latLng(centerLatLng[0], centerLatLng[1]);
+          map.fitBounds([hospitalBounds, [centerPoint, centerPoint]]);
+        } catch (error) {
+          console.error('Error fetching hospitals:', error);
+          alert('Failed to fetch hospital data from OpenStreetMap');
+        }
+
+        document.body.removeChild(dialog);
+      });
+    }
+
+    // Enhanced Attribute Statistics Tool with Geographic Filtering
+    function runAttributeStatistics() {
+      // Create UI for statistics selection
+      const statsDiv = document.createElement('div');
+      statsDiv.innerHTML = `
+        <div style="padding: 10px;">
+            <h3>Attribute Statistics</h3>
+            <label>Field to analyze:</label>
+            <select id="stats-field" class="form-control">
+                ${getAttributeOptions()}
+            </select>
+            <label>Geographic Level:</label>
+            <select id="stats-geo-level" class="form-control">
+                <option value="all">All Data</option>
+                <option value="province">By Province</option>
+                <option value="district">By District</option>
+                <option value="municipality">By Municipality</option>
+            </select>
+            <button id="calculate-stats" class="btn btn-primary" style="margin-top: 10px;">Calculate Statistics</button>
+        </div>
+      `;
+
+      // Show the UI in a popup
+      const statsPopup = L.popup()
+        .setLatLng(map.getCenter())
+        .setContent(statsDiv)
+        .openOn(map);
+
+      // Handle the calculate button click
+      document.getElementById('calculate-stats').addEventListener('click', function () {
+        const field = document.getElementById('stats-field').value;
+        const geoLevel = document.getElementById('stats-geo-level').value;
+        calculateAndShowStats(field, geoLevel);
+        map.closePopup(statsPopup);
+      });
+
+      function getAttributeOptions() {
+        if (!incidentGeoJSON || !incidentGeoJSON.features.length) return '<option>No data available</option>';
+
+        const sampleProps = incidentGeoJSON.features[0].properties;
+        return Object.keys(sampleProps)
+          .filter(prop => prop !== 'geometry')
+          .map(prop => `<option value="${prop}">${prop}</option>`)
+          .join('');
+      }
+
+      function calculateAndShowStats(field, geoLevel) {
+        if (!incidentGeoJSON || !incidentGeoJSON.features.length) {
+          alert("No incident data available");
+          return;
+        }
+
+        let features = [...incidentGeoJSON.features];
+
+        // If geographic filtering is needed
+        if (geoLevel !== 'all') {
+          const selectedArea = prompt(`Enter ${geoLevel} name to filter by (or leave blank for all):`);
+          if (selectedArea) {
+            features = features.filter(f =>
+              f.properties[geoLevel] &&
+              f.properties[geoLevel].toLowerCase() === selectedArea.toLowerCase()
+            );
+          }
+        }
+
+        const values = features.map(f => f.properties[field]);
+        const numericValues = values.filter(v => !isNaN(parseFloat(v))).map(Number);
+
+        let statsHTML = `<h3>${field} Statistics`;
+        if (geoLevel !== 'all') statsHTML += ` (${geoLevel} level)`;
+        statsHTML += `</h3><div style="max-height: 300px; overflow-y: auto;">`;
+
+        if (numericValues.length > 0) {
+          const min = Math.min(...numericValues);
+          const max = Math.max(...numericValues);
+          const sum = numericValues.reduce((a, b) => a + b, 0);
+          const avg = sum / numericValues.length;
+          const sorted = [...numericValues].sort((a, b) => a - b);
+          const median = sorted[Math.floor(sorted.length / 2)];
+          const stdDev = Math.sqrt(numericValues.map(x => Math.pow(x - avg, 2)).reduce((a, b) => a + b) / numericValues.length);
+
+          statsHTML += `
+                <p>Count: ${numericValues.length}</p>
+                <p>Min: ${min.toFixed(2)}</p>
+                <p>Max: ${max.toFixed(2)}</p>
+                <p>Average: ${avg.toFixed(2)} ± ${stdDev.toFixed(2)}</p>
+                <p>Median: ${median.toFixed(2)}</p>
+                <p>Total: ${sum.toFixed(2)}</p>
+            `;
+        } else {
+          const valueCounts = {};
+          values.forEach(v => {
+            const val = v || 'Unknown';
+            valueCounts[val] = (valueCounts[val] || 0) + 1;
+          });
+
+          // Sort by count descending
+          const sortedEntries = Object.entries(valueCounts).sort((a, b) => b[1] - a[1]);
+
+          statsHTML += `<table class="table table-striped"><tr><th>Value</th><th>Count</th><th>%</th></tr>`;
+          sortedEntries.forEach(([val, count]) => {
+            const percentage = (count / values.length * 100).toFixed(1);
+            statsHTML += `<tr><td>${val}</td><td>${count}</td><td>${percentage}%</td></tr>`;
+          });
+          statsHTML += `</table>`;
+        }
+
+        statsHTML += `</div>`;
+
+        // Show results in new popup
+        L.popup()
+          .setLatLng(map.getCenter())
+          .setContent(statsHTML)
+          .openOn(map);
+      }
+    }
+
+    // Load realtime dashboard data
+    async function loadRealtimeData() {
+      try {
+        // Load incident data from BIPAD
+        const response = await fetch('https://bipad.gov.np/api/incident-summary');
+        const data = await response.json();
+
+        // Clear existing layers
+        floodLayer.clearLayers();
+        landslideLayer.clearLayers();
+        fireLayer.clearLayers();
+        rainLayer.clearLayers();
+        earthquakeLayer.clearLayers();
+        animalLayer.clearLayers();
+
+        // Count incidents by type
+        const counts = {
+          flood: 0,
+          landslide: 0,
+          fire: 0,
+          rain: 0,
+          earthquake: 0,
+          animal: 0
+        };
+
+        data.forEach(item => {
+          const typeRaw = item.incident_type;
+          if (!typeRaw) return;
+          const type = typeRaw.toLowerCase();
+
+          const lat = parseFloat(item.latitude);
+          const lon = parseFloat(item.longitude);
+          if (isNaN(lat) || isNaN(lon)) return;
+
+          // Count incident types
+          if (type.includes('flood')) counts.flood++;
+          else if (type.includes('landslide')) counts.landslide++;
+          else if (type.includes('fire')) counts.fire++;
+          else if (type.includes('heavy rainfall') || type.includes('rainfall')) counts.rain++;
+          else if (type.includes('earthquake')) counts.earthquake++;
+          else if (type.includes('animal')) counts.animal++;
+
+          // Create marker with icon
+          const iconHtml = getIconHtml(type);
+          if (!iconHtml) return;
+
+          const incidentIcon = L.divIcon({
+            className: '',
+            html: iconHtml,
+            iconSize: [18, 18],
+            iconAnchor: [9, 9]
+          });
+
+          const layer = getLayerByType(type);
+          if (!layer) return;
+
+          const marker = L.marker([lat, lon], { icon: incidentIcon })
+            .bindPopup(`<strong>${typeRaw}</strong><br>Lat: ${lat.toFixed(4)}, Lon: ${lon.toFixed(4)}`);
+
+          layer.addLayer(marker);
+        });
+
+        // Update counts in HTML
+        document.getElementById('flood-count').textContent = counts.flood;
+        document.getElementById('landslide-count').textContent = counts.landslide;
+        document.getElementById('fire-count').textContent = counts.fire;
+        document.getElementById('rain-count').textContent = counts.rain;
+        document.getElementById('earthquake-count').textContent = counts.earthquake;
+        document.getElementById('animal-count').textContent = counts.animal;
+
+      } catch (error) {
+        console.error('Error loading realtime data:', error);
+        ['flood', 'landslide', 'fire', 'rain', 'earthquake', 'animal'].forEach(type => {
+          const el = document.getElementById(`${type}-count`);
+          if (el) el.textContent = '0';
+        });
+      }
+    }
+
+    // Get icon HTML for incident type
+    function getIconHtml(type) {
+      type = type.toLowerCase();
+      if (type.includes('fire')) return '<i class="fas fa-fire" style="color:red; font-size:18px;"></i>';
+      if (type.includes('earthquake')) return '<i class="fas fa-bolt" style="color:orange; font-size:18px;"></i>';
+      if (type.includes('flood')) return '<i class="fas fa-water" style="color:blue; font-size:18px;"></i>';
+      if (type.includes('landslide')) return '<i class="fas fa-mountain" style="color:brown; font-size:18px;"></i>';
+      if (type.includes('heavy rainfall')) return '<i class="fas fa-cloud-showers-heavy" style="color:gray; font-size:18px;"></i>';
+      if (type.includes('animal')) return '<i class="fas fa-paw" style="color:green; font-size:18px;"></i>';
+      return '';
+    }
+
+    // Get layer by incident type
+    function getLayerByType(type) {
+      type = type.toLowerCase();
+      if (type.includes('flood')) return floodLayer;
+      if (type.includes('landslide')) return landslideLayer;
+      if (type.includes('fire')) return fireLayer;
+      if (type.includes('heavy rainfall')) return rainLayer;
+      if (type.includes('earthquake')) return earthquakeLayer;
+      if (type.includes('animal')) return animalLayer;
+      return null;
+    }
+
+    function addSelectableGeoJSON(geojson, style) {
+      const layer = L.geoJSON(geojson, {
+        style,
+        onEachFeature: (feature, layer) => {
+          layer.on('click', function () {
+            if (!selectMode) return;
+            alert("You clicked on analysis result");
+          });
+        }
+      }).addTo(map);
+
+      geojsonLayers.push(layer);
+      return layer;
+    }
+
+    // UI event handlers
+    function toggleSelectMode() {
+      selectMode = !selectMode;
+      const btn = document.getElementById('select-toggle-btn');
+      btn.classList.toggle('select-mode-active', selectMode);
+      alert(`Select Mode ${selectMode ? 'Enabled' : 'Disabled'}`);
+    }
+
+    function showSearchMessage(msg) {
+      const searchMessage = document.getElementById('search-message');
+      if (!msg) {
+        searchMessage.style.display = 'none';
+        searchMessage.textContent = '';
+        return;
+      }
+      searchMessage.textContent = msg;
+      searchMessage.style.display = 'block';
+      setTimeout(() => searchMessage.style.display = 'none', 3000);
+    }
+
+    function openModal() {
+      document.getElementById('incident-modal').style.display = 'block';
+    }
+
+    function closeModal() {
+      document.getElementById('incident-form').reset();
+      document.getElementById('image-preview').style.display = 'none';
+      document.getElementById('incident-modal').style.display = 'none';
+    }
+
+    function toggleIncidentPanel() {
+      const panel = document.getElementById('incident-data-panel');
+      panel.style.display = panel.style.display === 'block' ? 'none' : 'block';
+    }
+
+    function toggleRealtimeDashboard() {
+      const dashboard = document.getElementById('realtime-dashboard');
+      dashboard.style.display = dashboard.style.display === 'block' ? 'none' : 'block';
+      if (dashboard.style.display === 'block') {
+        loadRealtimeData();
+      }
+    }
+
+    // Buffer Analysis Tool
+    function runBuffer() {
+      const bufferDiv = document.createElement('div');
+      bufferDiv.innerHTML = `
+        <div style="padding: 10px;">
+            <h3>Buffer Analysis</h3>
+            <label>Buffer Distance (meters):</label>
+            <input type="number" id="buffer-distance" class="form-control" value="1000" min="1">
+            <label>Buffer Around:</label>
+            <select id="buffer-target" class="form-control">
+                <option value="selected">Selected Features</option>
+                <option value="all">All Features</option>
+                <option value="point">Custom Point</option>
+            </select>
+            <button id="generate-buffer" class="btn btn-primary" style="margin-top: 10px;">Generate Buffer</button>
+        </div>
+      `;
+
+      const bufferPopup = L.popup()
+        .setLatLng(map.getCenter())
+        .setContent(bufferDiv)
+        .openOn(map);
+
+      document.getElementById('generate-buffer').addEventListener('click', function () {
+        const distance = parseFloat(document.getElementById('buffer-distance').value);
+        const target = document.getElementById('buffer-target').value;
+
+        if (isNaN(distance) || distance <= 0) {
+          alert("Please enter a valid buffer distance");
+          return;
+        }
+
+        map.closePopup(bufferPopup);
+        generateBufferZone(distance, target);
+      });
+
+      function generateBufferZone(distance, target) {
+        let featuresToBuffer = [];
+
+        if (target === 'selected' && selectedFeatures.size > 0) {
+          featuresToBuffer = getSelectedFeatures();
+        } else if (target === 'all' && incidentGeoJSON && incidentGeoJSON.features.length > 0) {
+          featuresToBuffer = incidentGeoJSON.features;
+        } else if (target === 'point') {
+          alert("Please click on the map to place a point to buffer around");
+          map.once('click', function (e) {
+            const pointFeature = {
+              type: 'Feature',
+              geometry: {
+                type: 'Point',
+                coordinates: [e.latlng.lng, e.latlng.lat]
+              }
+            };
+            createBuffer([pointFeature], distance);
+          });
+          return;
+        } else {
+          alert("No features available for buffering");
+          return;
+        }
+
+        createBuffer(featuresToBuffer, distance);
+      }
+
+      function createBuffer(features, distance) {
+        // Convert distance from meters to degrees (approximate)
+        const degDistance = distance / 111320;
+
+        // Create buffer for each feature and combine them
+        const buffers = features.map(feature => {
+          const buffer = turf.buffer(feature, degDistance, { units: 'degrees' });
+          return buffer;
+        });
+
+        const combinedBuffer = buffers.length > 1 ? turf.union(...buffers) : buffers[0];
+
+        // Add to map
+        if (bufferLayer) map.removeLayer(bufferLayer);
+        bufferLayer = L.geoJSON(combinedBuffer, {
+          style: {
+            color: '#ff7800',
+            weight: 1,
+            opacity: 1,
+            fillOpacity: 0.2
+          }
+        }).addTo(map);
+
+        // Zoom to buffer
+        map.fitBounds(bufferLayer.getBounds());
+
+        // Show buffer info
+        const area = turf.area(combinedBuffer);
+        alert(`Buffer zone created covering ${area.toFixed(0)} square meters`);
+      }
+    }
+
+    // Evacuation Analysis Tool
+    function runEvacuationAnalysis() {
+      const features = getSelectedFeatures();
+      if (features.length < 1) return alert("Please select at least one incident point.");
+
+      // Create dialog for evacuation input
+      const dialog = document.createElement('div');
+      dialog.className = 'analysis-dialog';
+      dialog.innerHTML = `
+        <h3>Evacuation Analysis</h3>
+        <label for="evacuation-distance">Search Distance (km):</label>
+        <input type="number" id="evacuation-distance" value="5" min="0.1" step="0.1">
+        <label for="evacuation-type">Facility Type:</label>
+        <select id="evacuation-type">
+          <option value="school">Schools</option>
+          <option value="community_center">Community Centers</option>
+          <option value="government_building">Government Buildings</option>
+          <option value="all">All Public Buildings</option>
+        </select>
+        <div class="analysis-dialog-buttons">
+          <button id="cancel-evacuation">Cancel</button>
+          <button id="apply-evacuation">Find Evacuation Centers</button>
+        </div>
+      `;
+
+      document.body.appendChild(dialog);
+
+      document.getElementById('cancel-evacuation').addEventListener('click', () => {
+        document.body.removeChild(dialog);
+      });
+
+      document.getElementById('apply-evacuation').addEventListener('click', async () => {
+        const distance = parseFloat(document.getElementById('evacuation-distance').value);
+        const facilityType = document.getElementById('evacuation-type').value;
+
+        if (isNaN(distance)) {
+          alert("Please enter a valid number");
+          return;
+        }
+
+        const center = features[0]; // Use first selected point as center
+        const centerLatLng = [center.geometry.coordinates[1], center.geometry.coordinates[0]];
+
+        try {
+          // Show loading message
+          const loadingMsg = L.popup()
+            .setLatLng(centerLatLng)
+            .setContent('<div style="padding:10px;"><b>Loading evacuation centers...</b><br>Querying OpenStreetMap</div>')
+            .openOn(map);
+
+          // Query Overpass API for evacuation centers
+          const radius = distance * 1000; // Convert km to meters
+          const [lng, lat] = center.geometry.coordinates;
+
+          let query;
+          if (facilityType === 'all') {
+            query = `[out:json][timeout:30];
+              (
+                node["amenity"~"school|community_centre|government"](around:${radius},${lat},${lng});
+                way["amenity"~"school|community_centre|government"](around:${radius},${lat},${lng});
+                relation["amenity"~"school|community_centre|government"](around:${radius},${lat},${lng});
+              );
+              out body;
+              >;
+              out skel qt;`;
+          } else {
+            let amenityValue;
+            switch (facilityType) {
+              case 'school': amenityValue = 'school'; break;
+              case 'community_center': amenityValue = 'community_centre'; break;
+              case 'government_building': amenityValue = 'government'; break;
+            }
+
+            query = `[out:json][timeout:30];
+              (
+                node["amenity"="${amenityValue}"](around:${radius},${lat},${lng});
+                way["amenity"="${amenityValue}"](around:${radius},${lat},${lng});
+                relation["amenity"="${amenityValue}"](around:${radius},${lat},${lng});
+              );
+              out body;
+              >;
+              out skel qt;`;
+          }
+
+          const response = await fetch(`https://overpass-api.de/api/interpreter?data=${encodeURIComponent(query)}`);
+          const data = await response.json();
+
+          map.closePopup(loadingMsg);
+
+          if (!data.elements || data.elements.length === 0) {
+            alert("No evacuation centers found in the specified area");
+            return;
+          }
+
+          // Process OSM data
+          const centers = data.elements
+            .filter(el => el.tags && el.tags.name)
+            .map(el => {
+              let point;
+              if (el.type === 'node') {
+                point = turf.point([el.lon, el.lat]);
+              } else if (el.center) {
+                point = turf.point([el.center.lon, el.center.lat]);
+              } else {
+                return null;
+              }
+
+              if (!point) return null;
+
+              const dist = turf.distance(center, point, { units: 'kilometers' });
+
+              return {
+                type: "Feature",
+                geometry: point.geometry,
+                properties: {
+                  name: el.tags.name,
+                  distance: dist,
+                  type: el.tags.amenity || 'public',
+                  address: el.tags['addr:full'] || el.tags['addr:street'] || '',
+                  phone: el.tags.phone || '',
+                  website: el.tags.website || '',
+                  osmId: el.id
+                }
+              };
+            })
+            .filter(Boolean)
+            .sort((a, b) => a.properties.distance - b.properties.distance);
+
+          // Create circle to show the search area
+          const circle = turf.circle(center.geometry.coordinates, distance, {
+            steps: 64,
+            units: 'kilometers'
+          });
+
+          addSelectableGeoJSON(circle, {
+            color: '#007BFF',
+            fillOpacity: 0.1,
+            fillColor: '#007BFF'
+          });
+
+          // Create custom evacuation center icon
+          const centerIcon = L.icon({
+            iconUrl: 'https://cdn-icons-png.flaticon.com/512/619/619153.png', // Evacuation center icon
+            iconSize: [32, 32],
+            iconAnchor: [16, 32],
+            popupAnchor: [0, -32]
+          });
+
+          // Create evacuation center layer with custom markers and detailed popups
+          if (evacuationLayer) map.removeLayer(evacuationLayer);
+
+          evacuationLayer = L.geoJSON({
+            type: 'FeatureCollection',
+            features: centers
+          }, {
+            pointToLayer: (feature, latlng) => {
+              return L.marker(latlng, {
+                icon: centerIcon,
+                title: feature.properties.name
+              });
+            },
+            onEachFeature: (feature, layer) => {
+              const props = feature.properties;
+
+              layer.bindPopup(`
+                <div class="hospital-popup">
+                  <b>${props.name}</b>
+                  <p><i class="fas fa-route"></i> ${props.distance.toFixed(2)} km from selected point</p>
+                  <p><i class="fas fa-building"></i> Type: ${props.type}</p>
+                  ${props.address ? `<p><i class="fas fa-map-marker-alt"></i> ${props.address}</p>` : ''}
+                  ${props.phone ? `<p><i class="fas fa-phone"></i> ${props.phone}</p>` : ''}
+                  ${props.website ? `<p><i class="fas fa-globe"></i> <a href="${props.website}" target="_blank">Website</a></p>` : ''}
+                </div>
+              `);
+            }
+          }).addTo(map);
+
+          geojsonLayers.push(evacuationLayer);
+
+          // Fit bounds to show both center and evacuation centers
+          const centerBounds = evacuationLayer.getBounds();
+          const centerPoint = L.latLng(centerLatLng[0], centerLatLng[1]);
+          map.fitBounds([centerBounds, [centerPoint, centerPoint]]);
+        } catch (error) {
+          console.error('Error fetching evacuation centers:', error);
+          alert('Failed to fetch evacuation center data from OpenStreetMap');
+        }
+
+        document.body.removeChild(dialog);
+      });
+    }
+
+    // Classification Tool
+    function runClassification() {
+      if (!incidentGeoJSON || !incidentGeoJSON.features.length) {
+        alert("No incident data available for classification");
+        return;
+      }
+
+      // Create UI for classification
+      const classDiv = document.createElement('div');
+      classDiv.innerHTML = `
+        <div style="padding: 10px;">
+            <h3>Classification Tool</h3>
+            <label>Classify By:</label>
+            <select id="classify-field" class="form-control">
+                <option value="Hazard">Hazard Type</option>
+                <option value="Severity">Severity Level</option>
+            </select>
+            <div style="margin-top: 10px;">
+                <button id="apply-classification" class="btn btn-primary">Apply Classification</button>
+                <button id="clear-classification" class="btn btn-default">Clear Classification</button>
+            </div>
+        </div>
+      `;
+
+      const classPopup = L.popup()
+        .setLatLng(map.getCenter())
+        .setContent(classDiv)
+        .openOn(map);
+
+      document.getElementById('apply-classification').addEventListener('click', function () {
+        const field = document.getElementById('classify-field').value;
+        applyClassification(field);
+        map.closePopup(classPopup);
+      });
+
+      document.getElementById('clear-classification').addEventListener('click', function () {
+        clearClassification();
+        map.closePopup(classPopup);
+      });
+
+      function applyClassification(field) {
+        // Remove existing classification layer if any
+        if (classificationLayer) {
+          map.removeLayer(classificationLayer);
+        }
+
+        // Remove existing legend if any
+        if (classificationLegend) {
+          classificationLegend.remove();
+        }
+
+        // Get unique values for the field
+        const uniqueValues = new Set();
+        incidentGeoJSON.features.forEach(f => {
+          const val = f.properties[field];
+          if (val !== undefined && val !== null) uniqueValues.add(val);
+        });
+
+        // Create color scale based on field
+        let colorScale;
+        if (field === 'Hazard') {
+          colorScale = hazardColors;
+        } else if (field === 'Severity') {
+          colorScale = severityColors;
+        } else {
+          // Generate random colors for other fields
+          colorScale = {};
+          const colors = ['#e41a1c', '#377eb8', '#4daf4a', '#984ea3', '#ff7f00', '#ffff33', '#a65628', '#f781bf'];
+          Array.from(uniqueValues).forEach((val, i) => {
+            colorScale[val] = colors[i % colors.length];
+          });
+        }
+
+        // Create new layer with classified points
+        classificationLayer = L.geoJSON(incidentGeoJSON, {
+          pointToLayer: (feature, latlng) => {
+            const color = colorScale[feature.properties[field]] || '#888';
+            return L.circleMarker(latlng, {
+              radius: 8,
+              fillColor: color,
+              color: '#000',
+              weight: 1,
+              opacity: 1,
+              fillOpacity: 0.8
+            });
+          },
+          onEachFeature: (feature, layer) => {
+            layer.bindPopup(`
+              <b>${feature.properties.Title || 'Incident'}</b><br>
+              <b>${field}:</b> ${feature.properties[field]}<br>
+              <b>Date:</b> ${feature.properties["Incident on"] || 'Unknown'}
+            `);
+          }
+        }).addTo(map);
+
+        // Create legend
+        classificationLegend = L.control({ position: 'bottomright' });
+        classificationLegend.onAdd = function (map) {
+          const div = L.DomUtil.create('div', 'classification-legend');
+          div.innerHTML = `<h4>${field} Classification</h4>`;
+
+          Array.from(uniqueValues).forEach(val => {
+            const color = colorScale[val] || '#888';
+            div.innerHTML += `
+              <div class="legend-item">
+                <div class="legend-color" style="background-color:${color};"></div>
+                <span>${val}</span>
+              </div>
+            `;
+          });
+
+          return div;
+        };
+        classificationLegend.addTo(map);
+      }
+
+      function clearClassification() {
+        if (classificationLayer) {
+          map.removeLayer(classificationLayer);
+          classificationLayer = null;
+        }
+        if (classificationLegend) {
+          classificationLegend.remove();
+          classificationLegend = null;
+        }
+      }
+    }
+
+    // Attribute Filter Tool
+    function runAttributeFilter(field) {
+      const filterDiv = document.createElement('div');
+      filterDiv.innerHTML = `
+        <div style="padding: 10px;">
+            <h3>Filter by ${field}</h3>
+            <label>Filter Value:</label>
+            <select id="filter-value" class="form-control">
+                ${getFilterOptions(field)}
+            </select>
+            <div style="margin-top: 10px;">
+                <button id="apply-filter" class="btn btn-primary">Apply Filter</button>
+                <button id="clear-filter" class="btn btn-default">Clear Filter</button>
+            </div>
+        </div>
+      `;
+
+      const filterPopup = L.popup()
+        .setLatLng(map.getCenter())
+        .setContent(filterDiv)
+        .openOn(map);
+
+      document.getElementById('apply-filter').addEventListener('click', function () {
+        const filterValue = document.getElementById('filter-value').value;
+        applyAttributeFilter(field, filterValue);
+        map.closePopup(filterPopup);
+      });
+
+      document.getElementById('clear-filter').addEventListener('click', function () {
+        clearAttributeFilter();
+        map.closePopup(filterPopup);
+      });
+
+      function getFilterOptions(field) {
+        if (!incidentGeoJSON || !incidentGeoJSON.features.length) return '<option>No data available</option>';
+
+        const uniqueValues = new Set();
+        incidentGeoJSON.features.forEach(f => {
+          const val = f.properties[field];
+          if (val !== undefined && val !== null) uniqueValues.add(val);
+        });
+
+        return ['<option value="ALL">-- All Values --</option>']
+          .concat(Array.from(uniqueValues).sort().map(val =>
+            `<option value="${val}">${val}</option>`
+          ))
+          .join('');
+      }
+
+      function applyAttributeFilter(field, value) {
+        if (value === 'ALL') {
+          clearAttributeFilter();
+          return;
+        }
+
+        if (filteredLayer) map.removeLayer(filteredLayer);
+
+        const filteredFeatures = incidentGeoJSON.features.filter(f =>
+          String(f.properties[field]) === String(value)
+        );
+
+        filteredLayer = L.geoJSON({
+          type: 'FeatureCollection',
+          features: filteredFeatures
+        }, {
+          pointToLayer: function (feature, latlng) {
+            return L.circleMarker(latlng, {
+              radius: 8,
+              fillColor: "#ff0000",
+              color: "#000",
+              weight: 1,
+              opacity: 1,
+              fillOpacity: 0.8
+            });
+          }
+        }).addTo(map);
+
+        if (filteredFeatures.length > 0) {
+          map.fitBounds(filteredLayer.getBounds());
+        }
+
+        alert(`Showing ${filteredFeatures.length} features matching ${field} = ${value}`);
+      }
+
+      function clearAttributeFilter() {
+        if (filteredLayer) {
+          map.removeLayer(filteredLayer);
+          filteredLayer = null;
+        }
+        alert("Filter cleared - showing all features");
+      }
+    }
+
+    // Initialize event listeners
+    document.addEventListener('DOMContentLoaded', function () {
+      // Load incidents data
+      loadIncidents();
+
+      // Panel toggles
+      document.querySelectorAll('.panel-box .toggle-btn').forEach(button => {
+        button.addEventListener('click', e => {
+          e.stopPropagation();
+          const dropdown = button.nextElementSibling;
+          document.querySelectorAll('.dropdown-panel').forEach(panel => {
+            if (panel !== dropdown) panel.style.display = 'none';
+          });
+          dropdown.style.display = dropdown.style.display === 'block' ? 'none' : 'block';
+        });
+      });
+
+      // Base map selection
+      document.querySelectorAll('.basemap-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          map.removeLayer(currentBaseLayer);
+          switch (btn.dataset.basemap) {
+            case 'osm': currentBaseLayer = osm; break;
+            case 'satellite': currentBaseLayer = satellite; break;
+            case 'terrain': currentBaseLayer = terrain; break;
+            case 'political': currentBaseLayer = politicalBase; break;
+          }
+          currentBaseLayer.addTo(map);
+        });
+      });
+
+      // Layer toggles
+      document.querySelectorAll('.layer-toggle').forEach(checkbox => {
+        checkbox.addEventListener('change', () => {
+          switch (checkbox.dataset.layer) {
+            case 'province':
+              checkbox.checked ? map.addLayer(provinceLayer) : map.removeLayer(provinceLayer);
+              break;
+            case 'district':
+              checkbox.checked ? map.addLayer(districtLayer) : map.removeLayer(districtLayer);
+              break;
+            case 'ward':
+              checkbox.checked ? map.addLayer(wardLayer) : map.removeLayer(wardLayer);
+              break;
+          }
+        });
+      });
+
+      // Map controls
+      document.getElementById('zoom-in-btn').addEventListener('click', () => map.zoomIn());
+      document.getElementById('zoom-out-btn').addEventListener('click', () => map.zoomOut());
+
+      // Search location
+      document.getElementById('search-location-btn').addEventListener('click', () => {
+        const searchBox = document.getElementById('search-box');
+        searchBox.style.display = searchBox.style.display === 'block' ? 'none' : 'block';
+        if (searchBox.style.display === 'block') {
+          document.getElementById('search-input').focus();
+        }
+      });
+
+      document.getElementById('submit-search').addEventListener('click', () => {
+        const input = document.getElementById('search-input').value.trim();
+        if (!input) return showSearchMessage('');
+
+        const searchBox = document.getElementById('search-box');
+        searchBox.style.display = 'none';
+
+        const latlngMatch = input.match(/^(-?\d+(\.\d+)?),\s*(-?\d+(\.\d+)?)$/);
+        if (latlngMatch) {
+          const lat = parseFloat(latlngMatch[1]);
+          const lng = parseFloat(latlngMatch[3]);
+          if (lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
+            map.setView([lat, lng], 12);
+            if (searchMarker) map.removeLayer(searchMarker);
+            searchMarker = L.marker([lat, lng]).addTo(map)
+              .bindPopup(`Coordinates: ${lat.toFixed(5)}, ${lng.toFixed(5)}`)
+              .openPopup();
+            return showSearchMessage(`Coordinates: ${lat.toFixed(5)}, ${lng.toFixed(5)}`);
+          }
+          return showSearchMessage("Invalid latitude or longitude values.");
+        }
+
+        fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(input)}`)
+          .then(res => res.json())
+          .then(results => {
+            if (!results.length) return showSearchMessage("Location not found");
+            const loc = results[0];
+            const lat = parseFloat(loc.lat);
+            const lon = parseFloat(loc.lon);
+            map.setView([lat, lon], 12);
+            if (searchMarker) map.removeLayer(searchMarker);
+            searchMarker = L.marker([lat, lon]).addTo(map)
+              .bindPopup(`<b>${loc.display_name}</b>`)
+              .openPopup();
+            showSearchMessage(loc.display_name);
+          })
+          .catch(() => showSearchMessage("Error searching location"));
+      });
+
+      // Set location
+      document.getElementById('set-location-btn').addEventListener('click', () => {
+        map.locate({ setView: true, maxZoom: 12 });
+        map.once('locationfound', e => {
+          if (locationMarker) map.removeLayer(locationMarker);
+          locationMarker = L.marker(e.latlng).addTo(map)
+            .bindPopup("Your Location!")
+            .openPopup();
+          showSearchMessage("Location found");
+
+          // Auto-fill incident form if open
+          document.getElementById('incident-lat').value = e.latlng.lat.toFixed(6);
+          document.getElementById('incident-lng').value = e.latlng.lng.toFixed(6);
+        });
+        map.once('locationerror', () => showSearchMessage("Unable to determine location"));
+      });
+
+      // Measure tool
+      document.getElementById('measure-btn').addEventListener('click', () => {
+        if (!measureActive) {
+          measureControl.addTo(map);
+          measureActive = true;
+          document.getElementById('measure-btn').classList.add('active');
+        } else {
+          map.removeControl(measureControl);
+          measureActive = false;
+          document.getElementById('measure-btn').classList.remove('active');
+        }
+      });
+
+      // Select mode
+      document.getElementById('select-toggle-btn').addEventListener('click', toggleSelectMode);
+
+      // Clear map
+      document.getElementById('clear-map-btn').addEventListener('click', () => {
+        if (searchMarker) map.removeLayer(searchMarker);
+        if (locationMarker) map.removeLayer(locationMarker);
+        selectedFeatures.clear();
+        geojsonLayers.forEach(layer => map.removeLayer(layer));
+        geojsonLayers = [];
+        if (incidentLayer) {
+          map.removeLayer(incidentLayer);
+          drawIncidents();
+        }
+        if (hospitalLayer) {
+          map.removeLayer(hospitalLayer);
+          hospitalLayer = null;
+        }
+        if (routeLayer) {
+          map.removeLayer(routeLayer);
+          routeLayer = null;
+        }
+        if (evacuationLayer) {
+          map.removeLayer(evacuationLayer);
+          evacuationLayer = null;
+        }
+        if (classificationLayer) {
+          map.removeLayer(classificationLayer);
+          classificationLayer = null;
+        }
+        if (classificationLegend) {
+          classificationLegend.remove();
+          classificationLegend = null;
+        }
+        showSearchMessage('Map cleared');
+      });
+
+      // Analysis panel
+      document.getElementById('analysis-btn').addEventListener('click', (e) => {
+        e.stopPropagation();
+        const panel = document.getElementById('analysis-panel');
+        panel.style.display = panel.style.display === 'block' ? 'none' : 'block';
+      });
+
+      // Analysis dropdowns
+      document.getElementById('spatial-btn').addEventListener('click', (e) => {
+        e.stopPropagation();
+        const dropdown = document.getElementById('spatial-dropdown');
+        dropdown.style.display = dropdown.style.display === 'block' ? 'none' : 'block';
+        document.getElementById('attribute-dropdown').style.display = 'none';
+      });
+
+      document.getElementById('attribute-btn').addEventListener('click', (e) => {
+        e.stopPropagation();
+        const dropdown = document.getElementById('attribute-dropdown');
+        dropdown.style.display = dropdown.style.display === 'block' ? 'none' : 'block';
+        document.getElementById('spatial-dropdown').style.display = 'none';
+      });
+
+      // Analysis operations
+      document.getElementById('buffer-btn').addEventListener('click', runBuffer);
+      document.getElementById('proximity-btn').addEventListener('click', runProximity);
+      document.getElementById('evacuation-btn').addEventListener('click', runEvacuationAnalysis);
+      document.getElementById('filter-btn').addEventListener('click', () => {
+        const field = prompt("Field to filter (e.g. Hazard):", "Hazard");
+        if (field) runAttributeFilter(field);
+      });
+      document.getElementById('classification-btn').addEventListener('click', runClassification);
+      document.getElementById('statistics-btn').addEventListener('click', runAttributeStatistics);
+
+      // Incident reporting
+      document.getElementById('report-incident-btn').addEventListener('click', openModal);
+      document.getElementById('cancel-incident-btn').addEventListener('click', closeModal);
+
+      document.getElementById('incident-image').addEventListener('change', function () {
+        const file = this.files[0];
+        const preview = document.getElementById('image-preview');
+        if (!file) {
+          preview.style.display = 'none';
+          return;
+        }
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          preview.src = e.target.result;
+          preview.style.display = 'block';
+        };
+        reader.readAsDataURL(file);
+      });
+
+      document.getElementById('incident-form').addEventListener('submit', function (e) {
+        e.preventDefault();
+
+        const type = document.getElementById('incident-type').value.trim();
+        const severity = document.getElementById('incident-severity').value.trim();
+        const desc = document.getElementById('incident-desc').value.trim();
+        const lat = parseFloat(document.getElementById('incident-lat').value);
+        const lng = parseFloat(document.getElementById('incident-lng').value);
+        const file = document.getElementById('incident-image').files[0];
+
+        if (!type || !desc || isNaN(lat) || isNaN(lng)) {
+          alert("Please fill all required fields");
+          return;
+        }
+
+        const newIncident = {
+          Title: type + " incident",
+          Hazard: type,
+          Severity: severity,
+          Description: desc,
+          Latitude: lat,
+          Longitude: lng,
+          "Incident on": new Date().toISOString().split('T')[0],
+          id: Date.now()
+        };
+
+        // Add to GeoJSON
+        const newFeature = {
+          type: "Feature",
+          geometry: { type: "Point", coordinates: [lng, lat] },
+          properties: newIncident
+        };
+
+        incidentGeoJSON.features.push(newFeature);
+
+        let popupContent = `
+          <b>${type}</b><br>
+          <b>Severity:</b> ${severity}<br>
+          ${desc}
+        `;
+
+        if (file) {
+          const reader = new FileReader();
+          reader.onload = function (e) {
+            popupContent += `<br><img src="${e.target.result}" style="max-width:150px; margin-top:5px;">`;
+            L.marker([lat, lng]).addTo(map)
+              .bindPopup(popupContent)
+              .openPopup();
+          };
+          reader.readAsDataURL(file);
+        } else {
+          L.marker([lat, lng]).addTo(map)
+            .bindPopup(popupContent)
+            .openPopup();
+        }
+
+        alert("Incident reported successfully!");
+        closeModal();
+
+        // Update incident panel
+        updateIncidentPanel();
+      });
+
+      // Helpline modal
+      document.getElementById('helpline-btn').addEventListener('click', function () {
+        document.getElementById('helpline-modal').style.display = 'block';
+      });
+
+      document.getElementById('close-helpline').addEventListener('click', function () {
+        document.getElementById('helpline-modal').style.display = 'none';
+      });
+
+      // Incident data panel
+      document.getElementById('btnIncidents').addEventListener('click', toggleIncidentPanel);
+      document.getElementById('close-incident-panel').addEventListener('click', toggleIncidentPanel);
+
+      // Realtime dashboard
+      document.getElementById('realtime-btn').addEventListener('click', toggleRealtimeDashboard);
+
+      // Close dropdowns when clicking outside
+      document.addEventListener('click', function (e) {
+        if (!e.target.closest('.dropdown-panel') && !e.target.closest('.toggle-btn')) {
+          document.querySelectorAll('.dropdown-panel').forEach(panel => {
+            panel.style.display = 'none';
+          });
+        }
+        if (!e.target.closest('.analysis-panel') && !e.target.closest('#analysis-btn')) {
+          document.getElementById('analysis-panel').style.display = 'none';
+        }
+        if (!e.target.closest('.analysis-dropdown') && !e.target.closest('.analysis-option')) {
+          document.querySelectorAll('.analysis-dropdown').forEach(dropdown => {
+            dropdown.style.display = 'none';
+          });
+        }
+        if (!e.target.closest('#incident-data-panel') && !e.target.closest('#btnIncidents')) {
+          document.getElementById('incident-data-panel').style.display = 'none';
+        }
+      });
+    });
+  </script>
+
+  <!-- REAL-TIME AQI DISPLAY SYSTEM -->
+  <script>
+    // IQAir API Configuration
+    const IQAIR_API_KEY = '74968931-2316-44eb-88ca-4499fa6a87a0';
+    const NEPAL_CITIES = [
+      { city: 'Kathmandu', state: 'Bagmati' },
+      { city: 'Pokhara', state: 'Gandaki' },
+      { city: 'Lalitpur', state: 'Bagmati' },
+      { city: 'Bharatpur', state: 'Bagmati' },
+      { city: 'Biratnagar', state: 'Province 1' },
+      { city: 'Birgunj', state: 'Madhesh' },
+      { city: 'Dharan', state: 'Province 1' },
+      { city: 'Butwal', state: 'Lumbini' },
+      { city: 'Dhangadhi', state: 'Sudurpashchim' },
+      { city: 'Nepalgunj', state: 'Lumbini' }
+    ];
+
+    // Function to fetch and display AQI data
+    async function updateAQIData() {
+      try {
+        document.getElementById('aqi-count').textContent = 'Loading...';
+
+        // Clear existing AQI markers
+        aqiLayer.clearLayers();
+
+        let unhealthyCount = 0;
+
+        // Fetch AQI for each city
+        for (const { city, state } of NEPAL_CITIES) {
+          try {
+            const data = await fetchCityAQI(city, state);
+            if (data && data.status === 'success') {
+              const aqi = data.data.current.pollution.aqius;
+              const coordinates = data.data.location.coordinates;
+
+              // Create AQI marker
+              createAQIMarker(
+                city,
+                aqi,
+                coordinates[1], // lat
+                coordinates[0],  // lng
+                data.data.current.pollution.ts
+              );
+
+              if (aqi > 100) unhealthyCount++;
+            }
+          } catch (error) {
+            console.error(`Error fetching AQI for ${city}:`, error);
+          }
+        }
+
+        // Update AQI counter
+        document.getElementById('aqi-count').textContent = unhealthyCount;
+
+      } catch (error) {
+        console.error('AQI update failed:', error);
+        document.getElementById('aqi-count').textContent = 'Error';
+      }
+    }
+
+    async function fetchCityAQI(city, state) {
+      const url = `https://api.airvisual.com/v2/city?city=${encodeURIComponent(city)}&state=${encodeURIComponent(state)}&country=Nepal&key=${IQAIR_API_KEY}`;
+      const response = await fetch(url);
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch AQI for ${city}: ${response.status}`);
+      }
+
+      return await response.json();
+    }
+
+    function createAQIMarker(city, aqi, lat, lng, timestamp) {
+      if (!lat || !lng) return;
+
+      const color = getAQIColor(aqi);
+      const size = Math.max(10, Math.min(25, aqi / 5)); // Dynamic size
+
+      // Create circle marker with AQI value
+      const marker = L.circleMarker([lat, lng], {
+        radius: size,
+        fillColor: color,
+        color: '#000',
+        weight: 1,
+        fillOpacity: 0.8
+      }).bindPopup(`
+      <div style="min-width: 200px;">
+        <h4 style="margin:0 0 5px 0;">${city}</h4>
+        <div style="display: flex; align-items: center; margin-bottom: 5px;">
+          <div style="width: 20px; height: 20px; background-color: ${color}; 
+                      border: 1px solid #000; margin-right: 10px;"></div>
+          <div>
+            <strong>AQI: ${aqi}</strong> (${getAQIDescription(aqi)})
+          </div>
+        </div>
+        <p style="margin:5px 0;">${getAQIHealthEffects(aqi)}</p>
+        <small>Updated: ${new Date(timestamp).toLocaleString()}</small>
+      </div>
+    `);
+
+      // Add text label with AQI value
+      const label = L.marker([lat, lng], {
+        icon: L.divIcon({
+          className: 'aqi-label',
+          html: `<div style="font-weight:bold; color:#000; text-shadow: -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff, 1px 1px 0 #fff;">${aqi}</div>`,
+          iconSize: [30, 30],
+          iconAnchor: [15, 15]
+        })
+      });
+
+      // Add to layer group
+      aqiLayer.addLayer(marker);
+      aqiLayer.addLayer(label);
+    }
+
+    // AQI color and description functions
+    function getAQIColor(aqi) {
+      if (aqi <= 50) return '#00E400'; // Green
+      if (aqi <= 100) return '#FFFF00'; // Yellow
+      if (aqi <= 150) return '#FF7E00'; // Orange
+      if (aqi <= 200) return '#FF0000'; // Red
+      if (aqi <= 300) return '#8F3F97'; // Purple
+      return '#7E0023'; // Maroon
+    }
+
+    function getAQIDescription(aqi) {
+      if (aqi <= 50) return 'Good';
+      if (aqi <= 100) return 'Moderate';
+      if (aqi <= 150) return 'Unhealthy for Sensitive Groups';
+      if (aqi <= 200) return 'Unhealthy';
+      if (aqi <= 300) return 'Very Unhealthy';
+      return 'Hazardous';
+    }
+
+    function getAQIHealthEffects(aqi) {
+      if (aqi <= 50) return 'Air quality is satisfactory';
+      if (aqi <= 100) return 'Acceptable air quality';
+      if (aqi <= 150) return 'Possible health effects for sensitive people';
+      if (aqi <= 200) return 'Health effects possible for everyone';
+      if (aqi <= 300) return 'Serious health effects possible';
+      return 'Health warning of emergency conditions';
+    }
+
+    // Initialize AQI system
+    document.addEventListener('DOMContentLoaded', function () {
+      // Make sure aqiLayer is initialized
+      if (!window.aqiLayer) {
+        window.aqiLayer = L.layerGroup().addTo(map);
+      }
+
+      // Initial AQI update
+      updateAQIData();
+
+      // Update every 15 minutes
+      setInterval(updateAQIData, 15 * 60 * 1000);
+
+      // Manual refresh
+      document.getElementById('refresh-btn')?.addEventListener('click', function () {
+        updateAQIData();
+        this.innerHTML = '<i class="fas fa-sync-alt fa-spin"></i> Refreshing';
+        setTimeout(() => {
+          this.innerHTML = '<i class="fas fa-sync-alt"></i> Refresh';
+        }, 2000);
+      });
+    });
+  </script>
+
+  <style>
+    /* Style for AQI labels */
+    .aqi-label {
+      pointer-events: none !important;
+      text-align: center;
+    }
+  </style>
+  <style>
+    .profile-box {
+      position: fixed;
+      top: 100px;
+      right: 40px;
+      width: 350px;
+      z-index: 1050;
+    }
+
+    .profile-card {
+      position: relative;
+      padding: 25px 20px;
+      border-radius: 18px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+      border: 2px solid #dee2e6;
+      background: linear-gradient(to top, #ffffff, #f7faff);
+      transition: all 0.3s ease;
+    }
+
+    .profile-card:hover {
+      transform: scale(1.02);
+      box-shadow: 0 12px 36px rgba(0, 0, 0, 0.25);
+    }
+  </style>
+  <div id="profile-box" class="profile-box shadow" style="display: none;">
+    <div class="profile-card bg-white">
+      <!-- Close button -->
+      <button onclick="closeProfile()" class="btn-close position-absolute top-0 end-0 m-3" aria-label="Close"></button>
+
+      <div class="text-center mb-4">
+        <h4 class="fw-bold text-success">👤 User Profile</h4>
+        <hr class="mb-3">
+      </div>
+
+      <div class="px-3">
+        <p><strong>Username:</strong> {{ user.username }}</p>
+        <p><strong>Email:</strong> {{ user.email }}</p>
+        <p><strong>Role:</strong> Disaster Analyst</p>
+        <p><strong>Uploads:</strong>
+          <a href="#report-incident-btn" class="text-primary fw-semibold text-decoration-none">0</a>
+        </p>
+      </div>
+
+      <div class="text-center mt-4">
+        <a href="{% url 'signout' %}" class="btn btn-danger w-75">Logout</a>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function toggleProfile() {
+      const box = document.getElementById('profile-box');
+      box.style.display = box.style.display === 'block' ? 'none' : 'block';
+    }
+
+    function closeProfile() {
+      document.getElementById('profile-box').style.display = 'none';
+    }
+  </script>
+  <script>
+    document.getElementById('export-csv-btn').addEventListener('click', () => {
+      if (!incidentGeoJSON || !incidentGeoJSON.features.length) {
+        alert("No data to export");
+        return;
+      }
+
+      const data = incidentGeoJSON.features.map(f => f.properties);
+      const csv = Papa.unparse(data);
+
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.setAttribute('href', url);
+      link.setAttribute('download', 'incident_data.csv');
+      link.style.display = 'none';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    });
+  </script>
+  <script>
+    document.querySelector('[title="Download Map"]').addEventListener('click', () => {
+      leafletImage(map, function (err, canvas) {
+        if (err || !canvas) {
+          alert("Map export failed. Try switching to OpenStreetMap base layer.");
+          console.error("Map export error:", err);
+          return;
+        }
+
+        const link = document.createElement('a');
+        link.download = 'map.png';
+        link.href = canvas.toDataURL();
+        link.click();
+      });
+    });
+    document.querySelector('[title="Download Report"]').addEventListener('click', () => {
+      leafletImage(map, async function (err, canvas) {
+        if (err || !canvas) {
+          alert("Map snapshot failed. Try using OpenStreetMap layer.");
+          return;
+        }
+
+        const { jsPDF } = window.jspdf;
+        const pdf = new jsPDF();
+
+        // Title
+        pdf.setFontSize(16);
+        pdf.text("Incident Report", 15, 20);
+
+        // Map
+        const imgData = canvas.toDataURL("image/png");
+        pdf.addImage(imgData, "PNG", 15, 30, 180, 90);
+
+        // Table Header
+        let y = 130;
+        const features = incidentGeoJSON.features || [];
+        const sample = features[0]?.properties || {};
+        const headers = Object.keys(sample).slice(0, 5); // Limit to 5 columns
+
+        pdf.setFontSize(10);
+        headers.forEach((h, i) => pdf.text(h, 15 + i * 35, y));
+        y += 8;
+
+        features.slice(0, 10).forEach((f) => {
+          headers.forEach((h, i) => {
+            const val = String(f.properties[h] || "").slice(0, 15);
+            pdf.text(val, 15 + i * 35, y);
+          });
+          y += 8;
+        });
+
+        pdf.save("incident_report.pdf");
+      });
+    });
+
+  </script>
+</body>
+
+
+</html>

@@ -1,0 +1,21 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<h1>Welcome to the Disaster Management System</h1>
+<p>This is the dashboard or landing page content.</p>
+{% endblock %}
+{% autoescape off %}
+
+Welcome to APD - Django Login!
+Hello {{ name }}!
+
+Please confirm your email by clicking the link below:
+
+Confirmation Link: http://{{ domain }}{% url 'activate' uidb64=uid token=token %}
+
+If you did not request this, you can ignore the email.
+
+Thanks,  
+The APD Team
+
+{% endautoescape %}
